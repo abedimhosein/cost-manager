@@ -10,27 +10,33 @@ from fastapi import (
 from fastapi.responses import JSONResponse
 
 COSTS_DB: Dict[int, dict] = {}
-LAST_COST_ID: int = 1
 
 app = FastAPI()
 
 
-@app.post("/costs/", description='Cost Create')
+def get_last_id() -> int:
+    ids = COSTS_DB.keys()
+    if ids:
+        return max(ids) + 1
+
+    return 1
+
+
+@app.post("/costs", description='Cost Create')
 async def cost_create(amount: float = Body(...), description: str = Body(...)):
-    global LAST_COST_ID
+    last_cost_id = get_last_id()
 
     new_cost = {
-        'id': LAST_COST_ID,
+        'id': last_cost_id,
         'amount': amount,
         'description': description,
     }
-    COSTS_DB[LAST_COST_ID] = new_cost
-    LAST_COST_ID += 1
+    COSTS_DB[last_cost_id] = new_cost
 
     return new_cost
 
 
-@app.put("/costs/{cost_id}/", description='Cost Update')
+@app.put("/costs/{cost_id}", description='Cost Update')
 async def cost_update(cost_id: int, amount: float = Body(...), description: str = Body(...)):
     if cost_data := COSTS_DB.get(cost_id):
         cost_data.update({'amount': amount, 'description': description})
@@ -39,7 +45,7 @@ async def cost_update(cost_id: int, amount: float = Body(...), description: str 
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='cost not found.')
 
 
-@app.delete("/costs/{cost_id}/", description='Cost Delete')
+@app.delete("/costs/{cost_id}", description='Cost Delete')
 async def cost_delete(cost_id: int):
     if cost_id in COSTS_DB:
         COSTS_DB.pop(cost_id)
@@ -48,7 +54,7 @@ async def cost_delete(cost_id: int):
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='cost not found.')
 
 
-@app.get("/costs/{cost_id}/", description='Cost Detail')
+@app.get("/costs/{cost_id}", description='Cost Detail')
 async def cost_detail(cost_id: int):
     if cost_data := COSTS_DB.get(cost_id):
         return cost_data
@@ -56,6 +62,6 @@ async def cost_detail(cost_id: int):
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='cost not found.')
 
 
-@app.get("/costs/", description='Cost List')
+@app.get("/costs", description='Cost List')
 async def cost_list():
     return list(COSTS_DB.values())
